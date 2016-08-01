@@ -133,14 +133,14 @@ Output:
 Add source from source.json to above Collectors? [Y/N]: Y
 2016-08-01 11:30:35,898 -0700 [COMPLETE] add source to collectors
 2016-08-01 11:30:35,899 -0700 [INFO] 4 total collectors
-+----------+---------+-------------+
-| name     | status  | description |
-+----------+---------+-------------+
-| ubuntu-1 | SUCCESS |             |
-| ubuntu-2 | SUCCESS |             |
-| ubuntu-3 | SUCCESS |             |
-| ubuntu-4 | SUCCESS |             |
-+----------+---------+-------------+
++----------+---------+-------------------------+
+| name     | status  | description             |
++----------+---------+-------------------------+
+| ubuntu-1 | SUCCESS | Added source 100005234. |
+| ubuntu-2 | SUCCESS | Added source 100005235. |
+| ubuntu-3 | SUCCESS | Added source 100005236. |
+| ubuntu-4 | SUCCESS | Added source 100005237. |
++----------+---------+-------------------------+
 ```
 
 
