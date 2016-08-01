@@ -120,7 +120,7 @@ $ python sumo_mgmt.py -url https://api.sumologic.com/api/v1/ -accessid [YOUR ACC
 Output:
 ```
 2016-08-01 11:30:27,502 -0700 [PROGRESS] fetching and sorting through the next 1 to 33 collectors
-2016-08-01 11:30:27,503 -0700 [INFO] skipping 29 Collectors not in UI mode...
+2016-08-01 11:30:27,503 -0700 [INFO] skipping 29 collectors not in UI mode...
 2016-08-01 11:30:27,504 -0700 [INFO] 4 total collectors
 +----------+-----------+-----------+----------+----------------+-------+
 | name     | id        | version   | category | sourceSyncMode | alive |
@@ -133,14 +133,14 @@ Output:
 Add source from source.json to above Collectors? [Y/N]: Y
 2016-08-01 11:30:35,898 -0700 [COMPLETE] add source to collectors
 2016-08-01 11:30:35,899 -0700 [INFO] 4 total collectors
-+----------+-----------+---------+-------------+
-| name     | id        | status  | description |
-+----------+-----------+---------+-------------+
-| ubuntu-1 | 100000077 | SUCCESS |             |
-| ubuntu-2 | 100000078 | SUCCESS |             |
-| ubuntu-3 | 100000079 | SUCCESS |             |
-| ubuntu-4 | 100000080 | SUCCESS |             |
-+----------+-----------+---------+-------------+
++----------+---------+-------------+
+| name     | status  | description |
++----------+---------+-------------+
+| ubuntu-1 | SUCCESS |             |
+| ubuntu-2 | SUCCESS |             |
+| ubuntu-3 | SUCCESS |             |
+| ubuntu-4 | SUCCESS |             |
++----------+---------+-------------+
 ```
 
 
