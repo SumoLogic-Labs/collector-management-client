@@ -73,8 +73,7 @@ def validate():
 
 	Returns:
 		bool: A boolean that is True if the arguments were valid and False otherwise.
-	'''
-
+	''' 
 	if not args.accessid:
 		args.accessid = [getpass.getpass('Enter your access ID: ')]
 
