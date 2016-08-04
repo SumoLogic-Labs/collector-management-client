@@ -31,6 +31,11 @@ python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS
 python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -addSource source.json name=test
 '''
 
+# Constants
+MAX_BATCH_SIZE = 100
+MIN_BATCH_SIZE = 10
+DEFAULT_BATCH_SIZE = 10
+
 # Command line arguments
 parser = argparse.ArgumentParser(description='A management script for upgrading, adding sources to, and listing available Collectors.')
 parser.add_argument('-upgrade', metavar='', type=str, nargs=1, help='upgrade given set of collectors to specified version')
@@ -89,8 +94,8 @@ def validate():
     parser.print_help()
     return False
   else:
-    if args.upgrade and args.batchSize and (args.batchSize[0] > 100 or args.batchSize[0] < 10):
-      log('[ERROR] batch size must be within range 10 to 100')
+    if args.upgrade and args.batchSize and (args.batchSize[0] > MAX_BATCH_SIZE or args.batchSize[0] < MIN_BATCH_SIZE):
+      log('[ERROR] batch size must be within range %d to %d' % (MIN_BATCH_SIZE, MAX_BATCH_SIZE))
       return False
     elif args.addSource and not is_valid_json(args.addSource[0]):
       return False
@@ -346,7 +351,7 @@ def upgrade_collectors(collector_list):
   Args:
     collector_list (list): The list of Collectors to be upgraded.
   '''
-  batch_size = args.batchSize[0] if args.batchSize else 100
+  batch_size = args.batchSize[0] if args.batchSize else DEFAULT_BATCH_SIZE
   total = len(collector_list)
   count = 1
 
