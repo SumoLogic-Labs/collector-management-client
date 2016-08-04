@@ -1,7 +1,9 @@
 Collector Management Script
 ============
 
-**Disclaimer:** As this is a community-supported script, we recommend first testing this script against non-production hosts. When upgrading a large set of Collectors, we advise running a small batch of upgrades first, to ensure that the upgrades work correctly before initiating a much larger upgrade job.
+| DISCLAIMER |
+| --- |
+| As this is a community-supported script, we recommend first testing this script against non-production hosts. When upgrading a large set of Collectors, we advise running a small batch of upgrades first, to ensure that the upgrades work correctly before initiating a much larger upgrade job. |
 
 This Python script allows managing a set of installed Collectors. The script currently supports:
 
