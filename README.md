@@ -1,6 +1,8 @@
 Collector Management Script
 ============
 
+**Disclaimer:** As this is a community-supported script, we recommend first testing this script against non-production hosts. When upgrading a large set of Collectors, we advise running a small batch of upgrades first, to ensure that the upgrades work correctly before initiating a much larger upgrade job.
+
 This Python script allows managing a set of installed Collectors. The script currently supports:
 
 * Listing details for a set of Collectors
@@ -117,6 +119,17 @@ Example:
 $ python sumo_mgmt.py -url https://api.sumologic.com/api/v1/ -accessid [YOUR ACCESS ID] -accesskey [YOUR ACCESS KEY] -addSource /path/to/source.json
 ```
 
+Example Host Metrics source JSON file: 
+```json
+{
+	"source": {
+		"name": "Host_Metrics",
+		"sourceType": "SystemStats",
+		"interval": 60000,
+		"metrics": ["CPU_User", "CPU_Sys", "Mem_Used"]
+	}
+}
+```
 Output:
 ```
 2016-08-01 11:30:27,502 -0700 [PROGRESS] fetching and sorting through the next 1 to 33 collectors
@@ -141,19 +154,6 @@ Add source from source.json to above Collectors? [Y/N]: Y
 | ubuntu-3 | SUCCESS | Added source 100005236. |
 | ubuntu-4 | SUCCESS | Added source 100005237. |
 +----------+---------+-------------------------+
-```
-
-
-Example Host Metrics source JSON file: 
-```json
-{
-	"source": {
-		"name": "Host_Metrics",
-		"sourceType": "SystemStats",
-		"interval": 60000,
-		"metrics": ["CPU_User", "CPU_Sys", "Mem_Used"]
-	}
-}
 ```
 
 ### More Examples
