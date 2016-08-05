@@ -33,7 +33,7 @@ python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS
 
 # Constants
 MAX_BATCH_SIZE = 100
-MIN_BATCH_SIZE = 10
+MIN_BATCH_SIZE = 1
 DEFAULT_BATCH_SIZE = 10
 
 # Command line arguments
@@ -346,7 +346,7 @@ def upgrade_collectors(collector_list):
   '''
   Upgrades a list of Collectors to the upgrade-to version and prints appropriate
   log messages to keep track of the progress. Collectors are upgraded in batches 
-  of size 100 by default when not specified by the user.
+  of size DEFAULT_BATCH_SIZE by default when not specified by the user.
 
   Args:
     collector_list (list): The list of Collectors to be upgraded.
