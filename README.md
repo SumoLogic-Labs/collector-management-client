@@ -74,7 +74,7 @@ A given subset of Collectors can be upgraded to a desired version via the `-upgr
 
 A Collector is considered upgradable if it belongs to the same customer account, is installable, not currently upgrading, and not already running the upgrade-to version. See the [Upgrading Collectors help page](https://help.sumologic.com/APIs/Collector_Management_API/Upgrade_or_Downgrade_Collectors_Using_the_API).
 
-By default, the Collectors are upgraded simultaneously in batches of 100, but an additional parameter `-batchSize` with a number between 1 and 100 may also be provided.
+By default, the Collectors are upgraded simultaneously in batches of 10, but an additional parameter `-batchSize` with a number between 1 and 100 may also be provided.
 
 The progress of the upgrades are queried about once every ten seconds and is printed in a corresponding table. All print statements are prepended with a timestamp to allow for logging.
 
