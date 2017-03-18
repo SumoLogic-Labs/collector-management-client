@@ -417,7 +417,7 @@ def filter_by(list, pairs):
   for elem in list:
     is_valid = True
     for key in pairs:
-      if not re.match('^' + str(pairs[key]) + '$', str(elem[key]), flags=0): 
+      if (not key in elem) or (not re.match('^' + str(pairs[key]) + '$', str(elem[key]), flags=0)): 
         is_valid = False
         break
     if is_valid:
