@@ -221,7 +221,7 @@ def check_for_upgraded(collector_list):
     collector_list (list): The list of Collectors to be processed.
   '''
   if args.upgrade[0] == 'latest':
-    args.upgrade[0] = '19.155-13' # TODO: replace with latest ver.
+    args.upgrade[0] = fetch_latest_ver()
   build = args.upgrade[0]
 
   for collector in collector_list:
@@ -229,6 +229,20 @@ def check_for_upgraded(collector_list):
       collector['action'] = 'SKIPPED'
     else:
       collector['action'] = 'UPGRADE'
+
+def fetch_latest_ver():
+  latest = 'Unknown'
+  url = args.url[0] + 'collectors/upgrades/targets'
+  r = requests.get(url, auth=(args.accessid[0], args.accesskey[0]))
+  if r.status_code != 200:
+    log('[ERROR] Unable to determine latest version')
+  else:
+    targets = r.json()['targets']
+    for target in targets:
+      if target['latest'] is True:
+        latest = target['version']
+        break
+  return latest
 
 def upgrade_batch(batch):
   '''
