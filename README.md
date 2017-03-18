@@ -5,48 +5,27 @@ Collector Management Script
 | --- |
 | As this is a community-supported script, we recommend first testing this script against non-production hosts. When upgrading a large set of Collectors, we advise running a small batch of upgrades first, to ensure that the upgrades work correctly before initiating a much larger upgrade job. |
 
-This Python script allows managing a set of installed Collectors. The script currently supports:
+This Python script allows managing a set of installed Sumo Logic Collectors by applying a bulk action:
 
-* Listing details for a set of Collectors
-* Upgrading or downgrading a set of Collectors to a desired version
-* Adding a collection source to a set of Collectors
+* Listing details about a set of Collectors (`-listVersions`)
+* Upgrading or downgrading a set of Collectors to a desired version (`-upgrade`)
+* Adding a collection source to a set of Collectors (`-addSource`)
+
+You can also optionally `-filter` the set of Collectors by name, category, or list of IDs.
 
 ### Required Modules
-The modules [requests](https://github.com/kennethreitz/requests) and [terminaltables](https://github.com/Robpol86/terminaltables) must be installed in order for the script to run properly. This can be done by simply running the commands: 
+The modules [requests](https://github.com/kennethreitz/requests) (version >=2.4.2) and [terminaltables](https://github.com/Robpol86/terminaltables) must be installed in order for the script to run properly. This can be done by simply running the commands: 
 ```
 pip install requests
 pip install terminaltables
 ```
 
-### Common Parameters
+### Authentication Parameters
 The `-url`, `-accessid`, and `-accesskey` parameters are required for API authentication purposes. API endpoints can be found in the [Collector Management API](https://help.sumologic.com/APIs/Collector_Management_API/About_the_Collector_Management_API).  To generate a Sumo Logic Access Id and Access Key, see [Create Access Keys](https://help.sumologic.com/Manage/Security/Access_Keys/Create_Access_Keys).
 
 If `-accessid` and `-accesskey` are not provided via command line arguments, the script will prompt the user to enter the access ID and key manually before proceeding.
 
 The optional `-y` parameter can be used to bypass user prompts.
-
-### Filtering Collectors
-An optional `-filter` parameter is used to narrow the set of Collectors that will be modified for any of the three available commands. Collectors can be filtered by _name_, _category_, _version_, or _ids_ fields.
-
-The _name_ field specifies a Collector name to filter. The wildcard character `*` may also be used.
-```
--filter name=prod-collector-*
-```
-
-The _category_ field specifies a Collector category to filter. The wildcard character `*` may also be used here.
-```
--filter category=test
-```
-
-The _version_ field specifies a Collector version number to filter.
-```
--filter version=19.155-13
-```
-
-The _id_ field specifies a list of Collector IDs to filter, separated by commas. 
-```
--filter ids=1234567,1726010,5555123
-```
 
 ### Listing Versions
 Relevant information about a subset of Collectors can be printed using the `-listVersions` command. An ASCII table displaying each Collector's name, id, version, category, sourceSyncMode (either "UI" or "json"), and whether the collector is "alive" (online).
@@ -156,6 +135,29 @@ Add source from source.json to above Collectors? [Y/N]: Y
 | ubuntu-3 | SUCCESS | Added source 100005236. |
 | ubuntu-4 | SUCCESS | Added source 100005237. |
 +----------+---------+-------------------------+
+```
+
+### Filtering Collectors
+An optional `-filter` parameter is used to narrow the set of Collectors that will be modified for any of the three available commands. Collectors can be filtered by _name_, _category_, _version_, or _ids_ fields.
+
+The _name_ field specifies a Collector name to filter. The wildcard character `*` may also be used.
+```
+-filter name=prod-collector-*
+```
+
+The _category_ field specifies a Collector category to filter. The wildcard character `*` may also be used here.
+```
+-filter category=test
+```
+
+The _version_ field specifies a Collector version number to filter.
+```
+-filter version=19.155-13
+```
+
+The _id_ field specifies a list of Collector IDs to filter, separated by commas. 
+```
+-filter ids=1234567,1726010,5555123
 ```
 
 ### More Examples
