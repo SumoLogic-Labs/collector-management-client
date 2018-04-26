@@ -5,6 +5,10 @@ Collector Management Script
 | --- |
 | As this is a community-supported script, we recommend first testing this script against non-production hosts. When upgrading a large set of Collectors, we advise running a small batch of upgrades first, to ensure that the upgrades work correctly before initiating a much larger upgrade job. |
 
+| TLS Deprecation Notice |
+| --- |
+| In keeping with industry standard security best practices, as of May 31, 2018, the Sumo Logic service will only support TLS version 1.2 going forward. Verify that all connections to Sumo Logic endpoints are made from software that supports TLS 1.2. |
+
 This Python script allows managing a set of installed Sumo Logic Collectors by applying a bulk action:
 
 * Listing details about a set of Collectors (`-listVersions`)
