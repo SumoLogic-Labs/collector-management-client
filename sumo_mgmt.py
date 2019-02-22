@@ -46,6 +46,10 @@ parser.add_argument('-accesskey', metavar='', type=str, nargs=1, help='(OPTIONAL
 parser.add_argument('-url', metavar='', type=str, nargs=1, help='URL for API call')
 parser.add_argument('-filter', metavar='', type=str, nargs=1, help='(OPTIONAL) filter list of all collectors by given type and condition')
 parser.add_argument('-listVersions', action='store_true', help='list the versions of a given set of collectors')
+parser.add_argument('-getsources', action='store_true', help='gets the sources for given set of collectors')
+parser.add_argument('-changesource', metavar='', type=str, nargs=1, help='chnages the sources for given set of collectors')
+
+
 
 # Additional options
 parser.add_argument('-y', '-Y', action='store_true', help='flag to automatically accept any prompts')
@@ -89,7 +93,7 @@ def validate():
     log('[ERROR] please provide a valid URL for the API endpoint')
     parser.print_help()
     return False
-  elif not args.listVersions and not args.upgrade and not args.addSource:
+  elif not args.listVersions and not args.upgrade and not args.addSource and not args.getsources and not args.changesource:
     log('[ERROR] please provide a command to list versions, upgrade, or add source')
     parser.print_help()
     return False
@@ -119,8 +123,12 @@ def prompt(msg):
   '''
   if args.y:
     return True
-
-  i = raw_input(msg)
+  #makes this python3 compliant
+  try:
+    i = raw_input(msg)
+  except:
+    i = input(msg)
+    
   while True:
     if i in ['Y', 'N', 'y', 'n']:
       return i.lower() == 'y'
@@ -209,6 +217,52 @@ def get_collectors(path, filters):
     offset += 1000
 
   return collector_list 
+
+
+def get_sources_by_collector(path, collector_list):
+  '''
+  Retrieves the list of Collectors in groups of 1000 via the API.
+
+  Args:
+    path (str): The path for the GET method that sends a request to the API. 
+    filters (dict): The set of key-value pairs that the Collectors in the list must have. 
+
+  Returns: 
+    list: The list of (filtered) Collectors.
+
+  The URL for the request is the API endpoint (e.g. 'http://api.sumologic.com/api/v1/') + 
+  'collectors' for getting Collectors,
+  'collectors/upgrades/collectors' for getting Collectors that can be upgraded. 
+
+  The parameter offset is passed to indicate offset into the list of Collectors. The default 
+  maximum number of Collectors to return in the request is 1000. The conditions for a
+  Collector to be able for upgrade requires that it is alive, installable, in the current org,
+  not in upgrading, not in the upgrade-to version, and not too old so that it cannot be upgraded.
+  '''
+  collectors_with_sources = []
+  for collector in collector_list:
+    source_dict = {}
+    url = args.url[0] + 'collectors/' + str(collector['id']) + '/sources'
+    source_list = []
+    payload = {}
+    r = requests.get(url, params=payload, auth=(args.accessid[0], args.accesskey[0]))
+    if r.status_code != 200:
+      log('[ERROR] %s' % r.json()['message'].lower()[:-1])
+    
+
+    collectors_with_sources.append(source_dict)
+    source_list = json.loads(r.text)['sources']
+    source_dict['id'] = str(collector['id'])
+    source_dict['sourcejson'] = source_list
+    log('[PROGRESS] Finished source get for collector ID: %s'%str(collector['id']))
+
+
+
+  return collectors_with_sources 
+
+
+
+
 
 def check_for_upgraded(collector_list):
   '''
@@ -414,6 +468,47 @@ def add_source(collector_list):
   print_collector_table(collector_list, ['name', 'status', 'description'])  
 
 
+def change_source(collector_list, name = 'ProdWebServices'):
+  '''
+  Adds a source specified by the JSON config file argument to the given list of
+  Collectors and prints the results in a table after doing so.
+
+  Args:
+    collector_list (list): The list of Collectors to be given the new
+    source.
+
+  The URL for the POST request to create a source for a Collector is given by 
+  the API endpoint + 'collectors/{collectorId}/sources'. The JSON data from the
+  file is sent in the contents of the request. A status code of 201 corresponds
+  to success and 400 corresponds to some failure with a message in the response.
+  '''
+  json_file = open(args.changesource[0], 'r+')
+  json_data = json.load(json_file)
+  
+  for collector in collector_list:
+    for source in collector['sourcejson']:
+      log( source['name'])
+      if source['name'] == name:
+        url = args.url[0] + 'collectors/' + str(collector['id']) + '/sources/' + str(source['id'])
+        log(url)
+        header = {'Content-Type': 'application/json'}
+        #first get the source
+        r = requests.get(url, headers=header, json=json_data, auth=(args.accessid[0], args.accesskey[0]))
+        etag = r.headers['ETag']
+        header = {'Content-Type': 'application/json', 'If-Match':etag}
+        r = requests.post(url, headers=header, json=json_data, auth=(args.accessid[0], args.accesskey[0]))
+
+        if r.status_code == 400 or r.status_code == 405:
+          collector['status'] = 'FAILURE'
+          collector['description'] = r.json()['message']
+        elif r.status_code == 201:
+          collector['status'] = 'SUCCESS'
+          collector['description'] = 'Chnaged source %d.' % r.json()['source']['id'] 
+  
+    log('[COMPLETE] changed source in collectors')
+    #print_collector_table(collector_list, ['name', 'status', 'description'])  
+
+
 def filter_by(list, pairs):
   '''
   Uses a generator to filter the elements in the list by the specified pairs.
@@ -519,11 +614,42 @@ def print_collector_table(collectors, headings):
   table = AsciiTable(table_data)
   log('[INFO] %d total collectors\n%s' % (table_rows, table.table))
 
+def print_sources_table(collectors, headings):
+  '''
+  Given a set of headings and a list of Collectors, prints the attributes
+  of each Collector (one per row) specified in the headings in a nice
+  ASCII table. If an attribute is empty, a dash is printed in the column 
+  instead.
+
+  Args:
+    collectors (list): The list of Collectors to be printed.
+    headings (list): The list of headings for the table.
+  '''
+  table_data = []
+  table_data.append(headings)
+  table_rows = 0
+
+  if collectors:
+    for collector in collectors:
+      for source in collector['sourcejson']:
+        row = []
+        row.append(collector['id'])
+        for col in headings[1:]:
+          row.append(source[col])
+        table_data.append(row)  
+    table_rows = len(table_data) - 1  
+  else:
+    table_data.append(['-'] * len(headings))   # prints blanks if table has no entries
+  
+  table = AsciiTable(table_data)
+  log('[INFO] %d total sources\n%s' % (table_rows, table.table))
+  
 
 if __name__ == "__main__":
   if validate():
     table_headings = ['name', 'id', 'version', 'category', 'sourceSyncMode', 'alive']
-
+    source_table_headings = ['collectorid','name', 'id', 'description', 'category']
+    
     if args.listVersions:
       collectors = get_collectors('collectors', {'collectorType': 'Installable'})
     elif args.upgrade: 
@@ -536,8 +662,16 @@ if __name__ == "__main__":
       collectors = list(filter_by(any_source_collectors, {'sourceSyncMode': 'UI'}))   # filters further 
       log('[INFO] skipping %d collectors not in UI mode...' % (len(any_source_collectors) - len(collectors)))
       msg = 'Add source from ' + str(args.addSource[0]) + ' to above Collectors? [Y/N]: '
-
+    elif args.getsources:
+      any_source_collectors = get_collectors('collectors', {'collectorType': 'Installable', 'alive': True})
+      collectors = list(filter_by(any_source_collectors, {'sourceSyncMode': 'UI'}))   # filters further         
+    elif args.changesource:
+      any_source_collectors = get_collectors('collectors', {'collectorType': 'Installable', 'alive': True})
+      collectors = list(filter_by(any_source_collectors, {'sourceSyncMode': 'UI'}))   # filters further          
+      msg = 'Change source from ' + str(args.changesource[0]) + ' to above Collectors? [Y/N]: '
+       
     if args.filter:
+      log("Filtering")
       collectors = filter_collectors(collectors)
     else:
       collectors = list(filter_by(collectors, {'name': '.*'}))   # quick fix for invalid names
@@ -548,5 +682,10 @@ if __name__ == "__main__":
       upgrade_collectors(list(filter_by(collectors, {'action': 'UPGRADE'})))
     elif collectors and args.addSource and prompt(msg):
       add_source(collectors)
-
-
+    elif args.getsources:
+      collectors_with_sources = get_sources_by_collector('collectors', collectors)
+      print_sources_table(collectors_with_sources, source_table_headings)
+    elif args.changesource  and prompt(msg):
+      collectors_with_sources = get_sources_by_collector('collectors', collectors)
+      print_sources_table(collectors_with_sources, source_table_headings)
+      change_source(collectors_with_sources)
