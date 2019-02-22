@@ -67,7 +67,7 @@ def log(statement):
   sign = '-' if utc_offset < 0 else '+'
   timestamp = now + ' ' + sign + str(abs(utc_offset)).zfill(2) + '00'
   
-  print timestamp + ' ' + statement
+  print (timestamp + ' ' + statement)
 
 import getpass
 def validate():
