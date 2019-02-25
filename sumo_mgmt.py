@@ -47,7 +47,7 @@ parser.add_argument('-url', metavar='', type=str, nargs=1, help='URL for API cal
 parser.add_argument('-filter', metavar='', type=str, nargs=1, help='(OPTIONAL) filter list of all collectors by given type and condition')
 parser.add_argument('-listVersions', action='store_true', help='list the versions of a given set of collectors')
 parser.add_argument('-getsources', action='store_true', help='gets the sources for given set of collectors')
-parser.add_argument('-changesource', metavar='', type=str, nargs=1, help='chnages the sources for given set of collectors')
+parser.add_argument('-changesource', metavar='', type=str, nargs=2, help='(OPTIONAL) changes the source for given set of collectors . Takes a path and a sourcename')
 
 
 
@@ -468,7 +468,7 @@ def add_source(collector_list):
   print_collector_table(collector_list, ['name', 'status', 'description'])  
 
 
-def change_source(collector_list, name = 'ProdWebServices'):
+def change_source(collector_list):
   '''
   Adds a source specified by the JSON config file argument to the given list of
   Collectors and prints the results in a table after doing so.
@@ -484,26 +484,31 @@ def change_source(collector_list, name = 'ProdWebServices'):
   '''
   json_file = open(args.changesource[0], 'r+')
   json_data = json.load(json_file)
+  name = args.changesource[1]
   
   for collector in collector_list:
     for source in collector['sourcejson']:
-      log( source['name'])
       if source['name'] == name:
+        log("Changing source %s in %s"%(name,  str(collector['id'])))
         url = args.url[0] + 'collectors/' + str(collector['id']) + '/sources/' + str(source['id'])
-        log(url)
+        
         header = {'Content-Type': 'application/json'}
         #first get the source
         r = requests.get(url, headers=header, json=json_data, auth=(args.accessid[0], args.accesskey[0]))
         etag = r.headers['ETag']
         header = {'Content-Type': 'application/json', 'If-Match':etag}
-        r = requests.post(url, headers=header, json=json_data, auth=(args.accessid[0], args.accesskey[0]))
-
+        #For some reason we need to add the sourceid
+        json_data['source']['id']=source['id']
+        
+        r = requests.put(url, headers=header, json=json_data, auth=(args.accessid[0], args.accesskey[0]))
         if r.status_code == 400 or r.status_code == 405:
+          log (r.status_code)
+          log (r.json()['message'])
           collector['status'] = 'FAILURE'
           collector['description'] = r.json()['message']
         elif r.status_code == 201:
           collector['status'] = 'SUCCESS'
-          collector['description'] = 'Chnaged source %d.' % r.json()['source']['id'] 
+          collector['description'] = 'Changed source %d.' % r.json()['source']['id'] 
   
     log('[COMPLETE] changed source in collectors')
     #print_collector_table(collector_list, ['name', 'status', 'description'])  
@@ -648,7 +653,7 @@ def print_sources_table(collectors, headings):
 if __name__ == "__main__":
   if validate():
     table_headings = ['name', 'id', 'version', 'category', 'sourceSyncMode', 'alive']
-    source_table_headings = ['collectorid','name', 'id', 'description', 'category']
+    source_table_headings = ['collectorid','name', 'id', 'category']
     
     if args.listVersions:
       collectors = get_collectors('collectors', {'collectorType': 'Installable'})
