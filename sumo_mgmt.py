@@ -436,7 +436,7 @@ def delete_collector(id):
       return False
   return True
 
-def delete_stale_collectors(collectors, day_limit, filter):
+def delete_stale_collectors(collectors, filter):
   '''
   Deletes all collectors which have been inactive longer than the specified day allowance
   '''
@@ -446,9 +446,7 @@ def delete_stale_collectors(collectors, day_limit, filter):
     collectors = list(filter_by(collectors, {'name': '.*'}))   # quick fix for invalid names
   for c in collectors:
       delete_collector(c['id'])
-      collectors.remove(c)
       print('deleting {}'.format(c['id']))
-  return collectors
 
 def get_inactive_collectors():
   '''
@@ -586,10 +584,12 @@ if __name__ == "__main__":
       delete_collector(args.deleteCollector[0])
       collectors = get_collectors('collectors', {'collectorType': 'Installable'})
     if args.getStaleCollectors:
+      print(args.getStaleCollectors[0])
       collectors = get_stale_collectors(args.getStaleCollectors[0])
     if args.deleteStaleCollectors:
+      print(args.deleteStaleCollectors[0])
       collectors = get_stale_collectors(args.deleteStaleCollectors[0])
-      collectors = delete_stale_collectors(collectors, args.deleteStaleCollectors[0], args.filter)
+      delete_stale_collectors(collectors, args.filter)
     if args.getInactiveCollectors:
       collectors = get_inactive_collectors()
     if args.listVersions:
