@@ -600,7 +600,7 @@ if __name__ == "__main__":
       table_headings.append('action')
       msg = 'Perform upgrade to version ' + str(args.upgrade[0]) + ' with above Collectors? [Y/N]: '
     elif args.addSource: 
-      any_source_collectors = get_collectors('ccollectors', {'collectorType': 'Installable', 'alive': True})
+      any_source_collectors = get_collectors('collectors', {'collectorType': 'Installable', 'alive': True})
       collectors = list(filter_by(any_source_collectors, {'sourceSyncMode': 'UI'}))   # filters further 
       log('[INFO] skipping %d collectors not in UI mode...' % (len(any_source_collectors) - len(collectors)))
       msg = 'Add source from ' + str(args.addSource[0]) + ' to above Collectors? [Y/N]: '
