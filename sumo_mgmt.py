@@ -29,6 +29,10 @@ python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS
 python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -upgrade 19.155-13 -batchSize 50
 python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -addSource source.json
 python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -addSource source.json name=test
+python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -getStaleCollectors 40 -filter name=test
+python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -deleteStaleCollectors 40 -filter name=test
+python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -deleteCollector id
+python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -getInactiveCollectors
 '''
 
 # Constants
@@ -46,7 +50,10 @@ parser.add_argument('-accesskey', metavar='', type=str, nargs=1, help='(OPTIONAL
 parser.add_argument('-url', metavar='', type=str, nargs=1, help='URL for API call')
 parser.add_argument('-filter', metavar='', type=str, nargs=1, help='(OPTIONAL) filter list of all collectors by given type and condition')
 parser.add_argument('-listVersions', action='store_true', help='list the versions of a given set of collectors')
-
+parser.add_argument('-getStaleCollectors', metavar='', type=int, nargs=1, help='list filtered or ALL stale collectors which have been inactive for the specified number of days')
+parser.add_argument('-deleteStaleCollectors', metavar='', type=int, nargs=1, help='deletes filtered or ALL stale collectors that have been inactive for the specified number of days')
+parser.add_argument('-deleteCollector', metavar='', type=int, nargs=1, help='deletes the specified collecter via id')
+parser.add_argument('-getInactiveCollectors', action='store_true', help='list of all inactive collectors')
 # Additional options
 parser.add_argument('-y', '-Y', action='store_true', help='flag to automatically accept any prompts')
 
@@ -67,7 +74,7 @@ def log(statement):
   sign = '-' if utc_offset < 0 else '+'
   timestamp = now + ' ' + sign + str(abs(utc_offset)).zfill(2) + '00'
   
-  print timestamp + ' ' + statement
+  print(timestamp + ' ' + statement)
 
 import getpass
 def validate():
@@ -89,8 +96,9 @@ def validate():
     log('[ERROR] please provide a valid URL for the API endpoint')
     parser.print_help()
     return False
-  elif not args.listVersions and not args.upgrade and not args.addSource:
-    log('[ERROR] please provide a command to list versions, upgrade, or add source')
+
+  elif not args.deleteStaleCollectors and not args.deleteCollector and not args.getInactiveCollectors and not args.getStaleCollectors and not args.listVersions and not args.upgrade and not args.addSource:
+    log('[ERROR] please provide a command to list versions, upgrade, add source, get stale collectors, delete stale collectors, get inactive collectors, delete collector')
     parser.print_help()
     return False
   else:
@@ -119,8 +127,11 @@ def prompt(msg):
   '''
   if args.y:
     return True
-
-  i = raw_input(msg)
+#makes this python3 compliant
+  try:
+    i = raw_input(msg)
+  except:
+    i = input(msg)
   while True:
     if i in ['Y', 'N', 'y', 'n']:
       return i.lower() == 'y'
@@ -414,6 +425,53 @@ def add_source(collector_list):
   print_collector_table(collector_list, ['name', 'status', 'description'])  
 
 
+def delete_collector(id):
+  '''
+  Deletes a collector using the provided collector id
+  '''
+  url = args.url[0] + 'collectors/'+ str(id)
+  r = requests.delete(url, auth=(args.accessid[0], args.accesskey[0]))
+  if r.status_code != 200:
+      log('[ERROR] %s' % r.json()['message'].lower()[:-1])
+      return False
+  return True
+
+def delete_stale_collectors(collectors, day_limit, filter):
+  '''
+  Deletes all collectors which have been inactive longer than the specified day allowance
+  '''
+  if filter:
+    collectors = filter_collectors(collectors)
+  else:
+    collectors = list(filter_by(collectors, {'name': '.*'}))   # quick fix for invalid names
+  for c in collectors:
+      delete_collector(c['id'])
+      collectors.remove(c)
+      print('deleting {}'.format(c['id']))
+  return collectors
+
+def get_inactive_collectors():
+  '''
+  Retrieves a list of inactive collectors
+  '''
+  collectors = get_collectors('collectors', {'alive':False})
+  return collectors
+
+def get_stale_collectors(day_limit):
+  '''
+  Retrieves a list of collectors which have been inactive longer than the specified day allowance
+  '''
+  collectors = get_collectors('collectors', {'alive':False})
+  current_milli_time = lambda: int(round(time.time() * 1000))
+  stale_collectors = []
+  ms_limit = day_limit * 24 * 60 * 60 * 1000
+  for c in collectors:
+      if (current_milli_time()- c['lastSeenAlive'])  > ms_limit:
+          stale_collectors.append(c)
+          #if delete_collector(c['id']) == False:
+            #   return False
+  return stale_collectors
+
 def filter_by(list, pairs):
   '''
   Uses a generator to filter the elements in the list by the specified pairs.
@@ -509,6 +567,8 @@ def print_collector_table(collectors, headings):
           row.append('-')
         elif col == 'version':
           row.append(collector['collectorVersion'])
+        elif col == 'lastSeenAlive':
+          row.append(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(collector['lastSeenAlive']/1000)))
         else:
           row.append(collector[col])
       table_data.append(row)  
@@ -519,11 +579,19 @@ def print_collector_table(collectors, headings):
   table = AsciiTable(table_data)
   log('[INFO] %d total collectors\n%s' % (table_rows, table.table))
 
-
 if __name__ == "__main__":
   if validate():
-    table_headings = ['name', 'id', 'version', 'category', 'sourceSyncMode', 'alive']
-
+    table_headings = ['name', 'id', 'version', 'category', 'sourceSyncMode', 'alive', 'lastSeenAlive']
+    if args.deleteCollector:
+      delete_collector(args.deleteCollector[0])
+      collectors = get_collectors('collectors', {'collectorType': 'Installable'})
+    if args.getStaleCollectors:
+      collectors = get_stale_collectors(args.getStaleCollectors[0])
+    if args.deleteStaleCollectors:
+      collectors = get_stale_collectors(args.deleteStaleCollectors[0])
+      collectors = delete_stale_collectors(collectors, args.deleteStaleCollectors[0], args.filter)
+    if args.getInactiveCollectors:
+      collectors = get_inactive_collectors()
     if args.listVersions:
       collectors = get_collectors('collectors', {'collectorType': 'Installable'})
     elif args.upgrade: 
@@ -532,7 +600,7 @@ if __name__ == "__main__":
       table_headings.append('action')
       msg = 'Perform upgrade to version ' + str(args.upgrade[0]) + ' with above Collectors? [Y/N]: '
     elif args.addSource: 
-      any_source_collectors = get_collectors('collectors', {'collectorType': 'Installable', 'alive': True})
+      any_source_collectors = get_collectors('ccollectors', {'collectorType': 'Installable', 'alive': True})
       collectors = list(filter_by(any_source_collectors, {'sourceSyncMode': 'UI'}))   # filters further 
       log('[INFO] skipping %d collectors not in UI mode...' % (len(any_source_collectors) - len(collectors)))
       msg = 'Add source from ' + str(args.addSource[0]) + ' to above Collectors? [Y/N]: '
@@ -549,4 +617,4 @@ if __name__ == "__main__":
     elif collectors and args.addSource and prompt(msg):
       add_source(collectors)
 
-
+      
