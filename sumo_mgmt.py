@@ -2,6 +2,7 @@ import os
 import re 
 import json
 import time
+import copy
 import itertools
 import requests
 import argparse
@@ -52,7 +53,7 @@ parser.add_argument('-filter', metavar='', type=str, nargs=1, help='(OPTIONAL) f
 parser.add_argument('-listVersions', action='store_true', help='list the versions of a given set of collectors')
 parser.add_argument('-getStaleCollectors', metavar='', type=int, nargs=1, help='list filtered or ALL stale collectors which have been inactive for the specified number of days')
 parser.add_argument('-deleteStaleCollectors', metavar='', type=int, nargs=1, help='deletes filtered or ALL stale collectors that have been inactive for the specified number of days')
-parser.add_argument('-deleteCollector', metavar='', type=int, nargs=1, help='deletes the specified collecter via id')
+parser.add_argument('-deleteCollector', metavar='', type=int, nargs=1, help='deletes the specified collecter by id')
 parser.add_argument('-getInactiveCollectors', action='store_true', help='list of all inactive collectors')
 # Additional options
 parser.add_argument('-y', '-Y', action='store_true', help='flag to automatically accept any prompts')
@@ -440,13 +441,9 @@ def delete_stale_collectors(collectors, filter):
   '''
   Deletes all collectors which have been inactive longer than the specified day allowance
   '''
-  if filter:
-    collectors = filter_collectors(collectors)
-  else:
-    collectors = list(filter_by(collectors, {'name': '.*'}))   # quick fix for invalid names
   for c in collectors:
-      delete_collector(c['id'])
-      print('deleting {}'.format(c['id']))
+    delete_collector(c['id'])
+    print('deleting {}'.format(c['id']))
 
 def get_inactive_collectors():
   '''
@@ -584,12 +581,9 @@ if __name__ == "__main__":
       delete_collector(args.deleteCollector[0])
       collectors = get_collectors('collectors', {'collectorType': 'Installable'})
     if args.getStaleCollectors:
-      print(args.getStaleCollectors[0])
       collectors = get_stale_collectors(args.getStaleCollectors[0])
     if args.deleteStaleCollectors:
-      print(args.deleteStaleCollectors[0])
       collectors = get_stale_collectors(args.deleteStaleCollectors[0])
-      delete_stale_collectors(collectors, args.filter)
     if args.getInactiveCollectors:
       collectors = get_inactive_collectors()
     if args.listVersions:
@@ -610,11 +604,16 @@ if __name__ == "__main__":
     else:
       collectors = list(filter_by(collectors, {'name': '.*'}))   # quick fix for invalid names
 
+    if args.deleteStaleCollectors:
+      msg = 'This command is will delete '+str(len(collectors))+' Collectors, are you sure you want to proceed? [Y/N]: '
+
     print_collector_table(collectors, table_headings)
 
     if collectors and args.upgrade and prompt(msg):
       upgrade_collectors(list(filter_by(collectors, {'action': 'UPGRADE'})))
     elif collectors and args.addSource and prompt(msg):
       add_source(collectors)
+    elif collectors and args.deleteStaleCollectors and prompt(msg):
+      delete_stale_collectors(collectors, args.filter)
 
       
