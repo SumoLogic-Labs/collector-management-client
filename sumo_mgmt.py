@@ -2,7 +2,6 @@ import os
 import re 
 import json
 import time
-import copy
 import itertools
 import requests
 import argparse
@@ -437,7 +436,7 @@ def delete_collector(id):
       return False
   return True
 
-def delete_stale_collectors(collectors, filter):
+def delete_stale_collectors(collectors):
   '''
   Deletes all collectors which have been inactive longer than the specified day allowance
   '''
@@ -605,7 +604,7 @@ if __name__ == "__main__":
       collectors = list(filter_by(collectors, {'name': '.*'}))   # quick fix for invalid names
 
     if args.deleteStaleCollectors:
-      msg = 'This command is will delete '+str(len(collectors))+' Collectors, are you sure you want to proceed? [Y/N]: '
+      msg = 'This command will delete '+str(len(collectors))+' Collectors, are you sure you want to proceed? [Y/N]: '
 
     print_collector_table(collectors, table_headings)
 
@@ -614,6 +613,6 @@ if __name__ == "__main__":
     elif collectors and args.addSource and prompt(msg):
       add_source(collectors)
     elif collectors and args.deleteStaleCollectors and prompt(msg):
-      delete_stale_collectors(collectors, args.filter)
+      delete_stale_collectors(collectors)
 
       
