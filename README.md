@@ -10,6 +10,10 @@ This Python script allows managing a set of installed Sumo Logic Collectors by a
 * Listing details about a set of Collectors (`-listVersions`)
 * Upgrading or downgrading a set of Collectors to a desired version (`-upgrade`)
 * Adding a collection source to a set of Collectors (`-addSource`)
+* List stale collectors which have been inactive for the specified number of days (`-getStaleCollectors`)
+* Deletes stale collectors that have been inactive for the specified number of days (`-deleteStaleCollectors`)
+* Deletes the specified collecter by id (`-deleteCollector`)
+* List ALL inactive collectors (`-getInactiveCollectors`)
 
 You can also optionally `-filter` the set of Collectors by name, category, or list of IDs.
 
