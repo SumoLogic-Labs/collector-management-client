@@ -462,8 +462,6 @@ def get_stale_collectors(day_limit):
   for c in collectors:
       if (current_milli_time()- c['lastSeenAlive'])  > ms_limit:
           stale_collectors.append(c)
-          #if delete_collector(c['id']) == False:
-            #   return False
   return stale_collectors
 
 def filter_by(list, pairs):
@@ -577,7 +575,6 @@ if __name__ == "__main__":
   if validate():
     table_headings = ['name', 'id', 'version', 'category', 'sourceSyncMode', 'alive', 'lastSeenAlive']
     if args.deleteCollector:
-      delete_collector(args.deleteCollector[0])
       collectors = get_collectors('collectors', {'collectorType': 'Installable'})
     if args.getStaleCollectors:
       collectors = get_stale_collectors(args.getStaleCollectors[0])
@@ -606,6 +603,9 @@ if __name__ == "__main__":
     if args.deleteStaleCollectors:
       msg = 'This command will delete '+str(len(collectors))+' Collectors, are you sure you want to proceed? [Y/N]: '
 
+    if args.deleteCollector:
+      msg = 'This command will delete the Collector with id = '+str(args.deleteCollector[0])+', are you sure you want to proceed? [Y/N]: '
+
     print_collector_table(collectors, table_headings)
 
     if collectors and args.upgrade and prompt(msg):
@@ -614,5 +614,7 @@ if __name__ == "__main__":
       add_source(collectors)
     elif collectors and args.deleteStaleCollectors and prompt(msg):
       delete_stale_collectors(collectors)
+    elif collectors and args.deleteCollector and prompt(msg):
+      delete_collector(args.deleteCollector[0])
 
       
