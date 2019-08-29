@@ -21,7 +21,7 @@ The user provides access ID, access key, and API endpoint URL parameters in addi
   -upgrade [version]: upgrade the list of Collectors obtained from the API to given version
   -addSource [json file path]: add source from JSON config file to the list of Collectors obtained from the API
   -listVersions: show the versions of each Collector in the list of Collectors obtained from the API
-  -listOffline [days]: lists offline Collectors, with aliveBeforeDays=days.
+  -updateSource: [json file path] [source_name] Updates source with a given name from JSON config file for each Collector.
 
 Finally, the user can also include a command to filter and apply changes to a subset of Collectors:
   -filter [type]=[condition]
@@ -31,8 +31,10 @@ Confirmation prompts can be bypassed for automatic script running if the -y flag
 Sample commands:
 python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -listVersions
 python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -upgrade 19.155-13 -batchSize 50
-python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -addSource source.json
-python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -addSource source.json name=test
+python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -addSource /path/to/source.json
+python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -addSource /path/to/source.json name=test
+python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -updateSource /path/to/source.json source_name
+
 '''
 
 # Constants
@@ -52,7 +54,7 @@ parser.add_argument('-url', metavar='', type=str, nargs=1, help='URL for API cal
 parser.add_argument('-filter', metavar='', type=str, nargs=1, help='(OPTIONAL) filter list of all collectors by given type and condition')
 parser.add_argument('-listVersions', action='store_true', help='list the versions of a given set of collectors')
 parser.add_argument('-getSources', action='store_true', help='list the sources of a given set of collectors')
-parser.add_argument('-updateSource', metavar='', type=str, nargs=2, help='updates source with a given name to a source defined in proved JSON file')
+parser.add_argument('-updateSource', metavar='', type=str, nargs=2, help='updates source with a given name to a source defined in provided JSON file')
 
 
 # Additional options
@@ -201,7 +203,7 @@ def get_collectors(path, filters):
         payload = {'offset': offset}
         r = requests.get(url, params=payload, auth=(args.accessid[0], args.accesskey[0]))
 
-        if r.status_code != 200:
+        if r.status_code != 200 and r.status_code != 201:
             log('[ERROR] %s' % r.json()['message'].lower()[:-1])
             break
 
@@ -232,7 +234,7 @@ def check_for_upgraded(collector_list):
     Collector with the upgrade-to version.
 
     Args:
-    collector_list (list): The list of Collectors to be processed.
+        collector_list (list): The list of Collectors to be processed.
     '''
     if args.upgrade[0] == 'latest':
         args.upgrade[0] = fetch_latest_ver()
@@ -249,7 +251,7 @@ def fetch_latest_ver():
     latest = 'Unknown'
     url = args.url[0] + 'collectors/upgrades/targets'
     r = requests.get(url, auth=(args.accessid[0], args.accesskey[0]))
-    if r.status_code != 200:
+    if r.status_code != 200 and r.status_code != 201:
         log('[ERROR] Unable to determine latest version')
     else:
         targets = r.json()['targets']
@@ -329,7 +331,7 @@ def check_batch(upgrade_tasks, batch_msg):
             url = args.url[0] + 'collectors/upgrades/' + task['id']
             r = requests.get(url, auth=(args.accessid[0], args.accesskey[0]), timeout=10)
 
-            if r.status_code == 200:
+            if r.status_code == 200 or r.status_code == 201:
                 status = r.json()['upgrade']['status']
 
                 if status == 0:
@@ -421,13 +423,12 @@ def add_source(collector_list):
         header = {'Content-Type': 'application/json'}
         r = requests.post(url, headers=header, json=json_data, auth=(args.accessid[0], args.accesskey[0]))
 
-        if r.status_code == 400:
-            collector['status'] = 'FAILURE'
-            collector['description'] = r.json()['message']
-        elif r.status_code == 201:
+        if r.status_code == 200 or r.status_code == 201:
             collector['status'] = 'SUCCESS'
             collector['description'] = 'Added source %d.' % r.json()['source']['id']
-        # TODO handle else
+        else:
+            collector['status'] = 'FAILURE'
+            collector['description'] = r.json()['message']            
 
     log('[COMPLETE] add source to collectors')
     print_collector_table(collector_list, ['name', 'status', 'description'])
@@ -492,7 +493,7 @@ def get_sources_by_collector(collector_list):
         source_list = []
         payload = {}
         r = requests.get(url, params=payload, auth=(args.accessid[0], args.accesskey[0]))
-        if r.status_code != 200:
+        if r.status_code != 200 and r.status_code != 201:
             log('[ERROR] %s' % r.json()['message'].lower()[:-1])
 
         source_list = json.loads(r.text)['sources']
@@ -620,7 +621,7 @@ def update_source(collector_list):
     name = args.updateSource[1]
 
     for collector in collector_list:
-        for source in collector['sourcejson']:
+        for i, source in enumerate(collector['sourcejson']):
             if source['name'] == name:
                 log("Updating source %s in %s" % (name,  str(collector['id'])))
                 url = args.url[0] + 'collectors/' + str(collector['id']) + '/sources/' + str(source['id'])
@@ -634,18 +635,18 @@ def update_source(collector_list):
                 json_data['source']['id'] = source['id']
 
                 r = requests.put(url, headers=header, json=json_data, auth=(args.accessid[0], args.accesskey[0]))
-                print(r)
-                if r.status_code == 400 or r.status_code == 405:
+
+                if r.status_code == 200 or r.status_code == 201:
+                    collector['status'] = 'SUCCESS'
+                    collector['description'] = 'Updated source %d.' % r.json()['source']['id']
+                    collector['sourcejson'][i] = r.json()['source'] # Updating source for a collector, based on HTTP response
+                else:
                     log(r.status_code)
                     log(r.json()['message'])
                     collector['status'] = 'FAILURE'
                     collector['description'] = r.json()['message']
-                elif r.status_code == 201:
-                    collector['status'] = 'SUCCESS'
-                    collector['description'] = 'Updated source %d.' % r.json()['source']['id']
-                # TODO handle else
 
-    log('[COMPLETE] updated source in collectors')
+    log('[COMPLETE] updated sources in collectors')
 
 
 if __name__ == "__main__":
@@ -653,6 +654,7 @@ if __name__ == "__main__":
         table_headings = ['name', 'id', 'version', 'category', 'sourceSyncMode', 'alive']
         source_table_headings = ['collectorid', 'name', 'id', 'category']
 
+        # Fetching collectors and setting up prompt message
         if args.listVersions:
             collectors = get_collectors('collectors', {'collectorType': 'Installable'})
         elif args.upgrade:
@@ -671,8 +673,9 @@ if __name__ == "__main__":
         elif args.updateSource:
             any_source_collectors = get_collectors('collectors', {'collectorType': 'Installable', 'alive': True})
             collectors = list(filter_by(any_source_collectors, {'sourceSyncMode': 'UI'}))   # filters further
-            msg = 'Update source from ' + str(args.updateSource[0]) + ' to above Collectors? [Y/N]: '
+            msg = 'Update source ' + str(args.updateSource[1]) + ' from ' + str(args.updateSource[0]) + ' to above Collectors? [Y/N]: '
 
+        # Filtering fetched collectors if needed
         if args.filter:
             collectors = filter_collectors(collectors)
         else:
@@ -680,6 +683,7 @@ if __name__ == "__main__":
 
         print_collector_table(collectors, table_headings)
 
+        # Process collectors
         if collectors and args.upgrade and prompt(msg):
             upgrade_collectors(list(filter_by(collectors, {'action': 'UPGRADE'})))
         elif collectors and args.addSource and prompt(msg):
@@ -689,5 +693,7 @@ if __name__ == "__main__":
             print_sources_table(collectors_with_sources, source_table_headings)
         elif args.updateSource and prompt(msg):
             collectors_with_sources = get_sources_by_collector(collectors)
-            print_sources_table(collectors_with_sources, source_table_headings)
             update_source(collectors_with_sources)
+            print_sources_table(collectors_with_sources, source_table_headings)
+
+
