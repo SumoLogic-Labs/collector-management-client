@@ -32,7 +32,7 @@ Sample commands:
 python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -listVersions
 python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -upgrade 19.155-13 -batchSize 50
 python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -addSource /path/to/source.json
-python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -addSource /path/to/source.json name=test
+python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -addSource /path/to/source.json -filter name=test
 python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS ID] -accesskey [ACCESS KEY] -updateSource /path/to/source.json source_name
 
 '''
