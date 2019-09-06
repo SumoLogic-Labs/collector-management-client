@@ -2,11 +2,15 @@ import os
 import re
 import json
 import time
-import itertools
+try:
+    from itertools import zip_longest
+except ImportError:
+    from itertools import izip_longest as zip_longest
 import requests
 import argparse
 from datetime import datetime
 from terminaltables import AsciiTable
+from builtins import input
 import getpass
 
 '''
@@ -22,6 +26,8 @@ The user provides access ID, access key, and API endpoint URL parameters in addi
   -addSource [json file path]: add source from JSON config file to the list of Collectors obtained from the API
   -listVersions: show the versions of each Collector in the list of Collectors obtained from the API
   -updateSource: [json file path] [source_name] Updates source with a given name from JSON config file for each Collector.
+  -listOfflineCollectors: [aliveBeforeDays]: List offline collectors with optional aliveBeforeDays parameter (in range from 1 to 100)
+  -deleteOfflineCollectors: [aliveBeforeDays]: Delete the list of offline collectors with optional aliveBeforeDays parameter (in range from 1 to 100)
 
 Finally, the user can also include a command to filter and apply changes to a subset of Collectors:
   -filter [type]=[condition]
@@ -41,6 +47,21 @@ python sumo_mgmt.py -url https://api.us2.sumologic.net/api/v1/ -accessid [ACCESS
 MAX_BATCH_SIZE = 100
 MIN_BATCH_SIZE = 1
 DEFAULT_BATCH_SIZE = 10
+MAX_ALIVE_BEFORE_DAYS = 100
+MIN_ALIVE_BEFORE_DAYS = 1
+
+
+def check_alive_before_days_range(arg):
+    try:
+        value = int(arg)
+    except ValueError as err:
+       raise argparse.ArgumentTypeError(str(err))
+
+    if value < MIN_ALIVE_BEFORE_DAYS or value > MAX_ALIVE_BEFORE_DAYS:
+        message = "Expected {} <= value <= {}, got value = {}".format(MIN_ALIVE_BEFORE_DAYS, MAX_ALIVE_BEFORE_DAYS, value)
+        raise argparse.ArgumentTypeError(message)
+
+    return value
 
 
 # Command line arguments
@@ -55,6 +76,8 @@ parser.add_argument('-filter', metavar='', type=str, nargs=1, help='(OPTIONAL) f
 parser.add_argument('-listVersions', action='store_true', help='list the versions of a given set of collectors')
 parser.add_argument('-getSources', action='store_true', help='list the sources of a given set of collectors')
 parser.add_argument('-updateSource', metavar='', type=str, nargs=2, help='updates source with a given name to a source defined in provided JSON file')
+parser.add_argument('-listOfflineCollectors', metavar="[1-100]", type=check_alive_before_days_range, nargs=1, help='list offline collectors, with given aliveBeforeDays parameter (in range from 1 to 100)')
+parser.add_argument('-deleteOfflineCollectors', metavar="[1-100]", type=check_alive_before_days_range, nargs=1, help='delete given set of offline collectors with given aliveBeforeDays parameter (in range from 1 to 100)')
 
 
 # Additional options
@@ -68,14 +91,13 @@ def log(statement):
     Prepends output with timestamp to allow for logging and then prints the output.
 
     Args:
-      statement (str): The output statement to be printed with a timestamp in the
-      format yyyy-MM-dd HH:mm:ss,SSS ZZZZ.
+        statement (str): The output statement to be printed with a timestamp in the
+        format yyyy-MM-dd HH:mm:ss,SSS ZZZZ.
     '''
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]
     utc_offset = time.localtime().tm_hour - time.gmtime().tm_hour
     sign = '-' if utc_offset < 0 else '+'
     timestamp = now + ' ' + sign + str(abs(utc_offset)).zfill(2) + '00'
-
     print(timestamp + ' ' + statement)
 
 
@@ -86,8 +108,12 @@ def validate():
     and ID are not provided, they are prompted for.
 
     Returns:
-    bool: A boolean that is True if the arguments were valid and False otherwise.
+        bool: A boolean that is True if the arguments were valid and False otherwise.
     '''
+    if (args.listOfflineCollectors or args.deleteOfflineCollectors) and args.filter:
+        log('[ERROR] -filter argument is disabled for offline Collectors management!')
+        return False
+
     if not args.accessid:
         args.accessid = [getpass.getpass('Enter your access ID: ')]
 
@@ -98,8 +124,9 @@ def validate():
         log('[ERROR] please provide a valid URL for the API endpoint')
         parser.print_help()
         return False
-    elif not (args.listVersions or args.upgrade or args.addSource or args.updateSource or args.getSources):
-        log('[ERROR] please provide a command to list versions, upgrade, or add source')
+    elif not any([args.listVersions, args.upgrade, args.addSource, args.updateSource,
+                args.getSources, args.deleteOfflineCollectors, args.listOfflineCollectors]):
+        log('[ERROR] please provide a command to list versions, list offline, upgrade, or add source')
         parser.print_help()
         return False
     else:
@@ -121,21 +148,21 @@ def prompt(msg):
     the -y flag is on, the prompt is bypassed.
 
     Args:
-    msg (str): The message to prompt the user with.
+        msg (str): The message to prompt the user with.
 
     Returns:
-    bool: A boolean corresponding to the user's response to the prompt, where True
-    means the user chose yes and accepted the prompt and False is otherwise.
+        bool: A boolean corresponding to the user's response to the prompt, where True
+            means the user chose yes and accepted the prompt and False is otherwise.
     '''
     if args.y:
         return True
 
-    i = raw_input(msg)
+    i = input(msg)
     while True:
         if i in ['Y', 'N', 'y', 'n']:
             return i.lower() == 'y'
         else:
-            i = raw_input('Invalid option, please choose again. ' + msg)
+            i = input('Invalid option, please choose again. ' + msg)
 
 
 def is_valid_json(json_file):
@@ -143,11 +170,11 @@ def is_valid_json(json_file):
     Checks that the given path for the JSON source configuration file is valid.
 
     Args:
-    json_file (str): The file path to the JSON file.
+        json_file (str): The file path to the JSON file.
 
     Returns:
-    bool: A boolean that is True if the file path leads to a valid JSON file and
-    False otherwise.
+        bool: A boolean that is True if the file path leads to a valid JSON file and
+            False otherwise.
     '''
     if not os.path.isfile(json_file):
         log('[ERROR] invalid file path for source configuration')
@@ -165,30 +192,32 @@ def group(n, iterable):
     if needed.
 
     Args:
-    n (int): The number of elements per group.
-    iterable (list): The list whose elements are to be split into groups of size n.
+        n (int): The number of elements per group.
+        iterable (list): The list whose elements are to be split into groups of size n.
 
     Returns:
-    list: The list of groups of size n, where each group is a list of n elements.
+        list: The list of groups of size n, where each group is a list of n elements.
     '''
     args = [iter(iterable)] * n
-    return ([e for e in t if e is not None] for t in itertools.izip_longest(*args))
+    return ([e for e in t if e is not None] for t in zip_longest(*args))
 
 
-def get_collectors(path, filters):
+def get_collectors(path, filters, aliveBeforeDays=0):
     '''
     Retrieves the list of Collectors in groups of 1000 via the API.
 
     Args:
         path (str): The path for the GET method that sends a request to the API.
         filters (dict): The set of key-value pairs that the Collectors in the list must have.
+        offline (boolean): True iff offline collectors should be fetched (proper url is also required)
 
     Returns:
-        list: The list of (filtered) Collectors.
+        list: The list of (filtered, offline) Collectors.
 
     The URL for the request is the API endpoint (e.g. 'http://api.sumologic.com/api/v1/') +
     'collectors' for getting Collectors,
-    'collectors/upgrades/collectors' for getting Collectors that can be upgraded.
+    'collectors/upgrades/collectors' for getting Collectors that can be upgraded,
+    'collectors/offline' for getting offline Collectors
 
     The parameter offset is passed to indicate offset into the list of Collectors. The default
     maximum number of Collectors to return in the request is 1000. The conditions for a
@@ -201,6 +230,10 @@ def get_collectors(path, filters):
 
     while True:
         payload = {'offset': offset}
+
+        if aliveBeforeDays > 0:
+            payload.update({'aliveBeforeDays': aliveBeforeDays})
+        
         r = requests.get(url, params=payload, auth=(args.accessid[0], args.accesskey[0]))
 
         if r.status_code != 200 and r.status_code != 201:
@@ -367,8 +400,8 @@ def wait_for_batch(upgrade_tasks, batch_msg):
     completion.
 
     Args:
-    upgrade_tasks (list): The list of upgrade tasks for the current batch.
-    batch_msg (str): The progres message to be printed when a batch is checked.
+        upgrade_tasks (list): The list of upgrade tasks for the current batch.
+        batch_msg (str): The progres message to be printed when a batch is checked.
     '''
     while True:
         tasks_remain = check_batch(upgrade_tasks, batch_msg)
@@ -544,8 +577,8 @@ def print_collector_table(collectors, headings):
     instead.
 
     Args:
-    collectors (list): The list of Collectors to be printed.
-    headings (list): The list of headings for the table.
+        collectors (list): The list of Collectors to be printed.
+        headings (list): The list of headings for the table.
     '''
     table_data = []
     table_data.append(headings)
@@ -641,12 +674,20 @@ def update_source(collector_list):
                     collector['description'] = 'Updated source %d.' % r.json()['source']['id']
                     collector['sourcejson'][i] = r.json()['source'] # Updating source for a collector, based on HTTP response
                 else:
-                    log(r.status_code)
-                    log(r.json()['message'])
                     collector['status'] = 'FAILURE'
                     collector['description'] = r.json()['message']
 
     log('[COMPLETE] updated sources in collectors')
+
+
+def delete_offline_collectors():
+    url = args.url[0] + '/collectors/offline'
+    r = requests.delete(url, params={'aliveBeforeDays': args.deleteOfflineCollectors[0]}, auth=(args.accessid[0], args.accesskey[0]))
+
+    if r.status_code != 200 and r.status_code != 201:
+        log('[ERROR] Failed to delete offline Collectors')
+    else:
+        log('[ERROR] Successfully deleted offline Collectors')
 
 
 if __name__ == "__main__":
@@ -657,6 +698,11 @@ if __name__ == "__main__":
         # Fetching collectors and setting up prompt message
         if args.listVersions:
             collectors = get_collectors('collectors', {'collectorType': 'Installable'})
+        elif args.deleteOfflineCollectors:
+            collectors = get_collectors('collectors/offline', None, args.deleteOfflineCollectors[0])
+            msg = 'Delete offline collectors above? [Y/N]: ' 
+        elif args.listOfflineCollectors:
+            collectors = get_collectors('collectors/offline', None, args.listOfflineCollectors[0])
         elif args.upgrade:
             collectors = get_collectors('collectors/upgrades/collectors', None)
             check_for_upgraded(collectors)
@@ -695,5 +741,5 @@ if __name__ == "__main__":
             collectors_with_sources = get_sources_by_collector(collectors)
             update_source(collectors_with_sources)
             print_sources_table(collectors_with_sources, source_table_headings)
-
-
+        elif args.deleteOfflineCollectors and prompt(msg):
+            delete_offline_collectors()
