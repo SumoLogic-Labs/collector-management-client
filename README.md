@@ -16,10 +16,11 @@ This Python script allows managing a set of installed Sumo Logic Collectors by a
 You can also optionally `-filter` the set of Collectors by name, category, or list of IDs. Filter **cannot be applied to offline Collectors** management.
 
 ### Required Modules
-The modules [requests](https://github.com/kennethreitz/requests) (version >=2.4.2) and [terminaltables](https://github.com/Robpol86/terminaltables) must be installed in order for the script to run properly. This can be done by simply running the commands: 
+The modules [requests](https://github.com/kennethreitz/requests) (version >=2.4.2), [terminaltables](https://github.com/Robpol86/terminaltables) and [future](https://github.com/PythonCharmers/python-future) (if Python 2 is used) must be installed in order for the script to run properly. This can be done by simply running the commands: 
 ```
 pip install requests
 pip install terminaltables
+pip install future
 ```
 
 ### Authentication Parameters
