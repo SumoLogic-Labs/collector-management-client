@@ -11,6 +11,7 @@ This Python script allows managing a set of installed Sumo Logic Collectors by a
 * Listing details about a set of offline Collectors (`-listOfflineCollectors`)
 * Upgrading or downgrading a set of Collectors to a desired version (`-upgrade`)
 * Adding a collection source to a set of Collectors (`-addSource`)
+* Updating a collection source with the same name that exists on a set of Collectors (`-updateSource`)
 * Deleting offline collectors (`-deleteOfflineCollectors`)
 
 You can also optionally `-filter` the set of Collectors by name, category, or list of IDs. Filter **cannot be applied to offline Collectors** management.
@@ -147,6 +148,16 @@ Add source from source.json to above Collectors? [Y/N]: Y
 | ubuntu-3 | SUCCESS | Added source 100005236. |
 | ubuntu-4 | SUCCESS | Added source 100005237. |
 +----------+---------+-------------------------+
+```
+
+### Updating a Source on Existing Collectors
+A collection source can be updated across a subset of Collectors by running the `-updateSource` command along with a file path to a single JSON file containing the updated source definition.
+
+This command will update sources with the same name belonging to Collectors in the filtered subset of Collectors.
+
+Example:
+```
+$ python sumo_mgmt.py -url https://api.sumologic.com/api/v1/ -accessid [YOUR ACCESS ID] -accesskey [YOUR ACCESS KEY] -updateSource /path/to/source.json
 ```
 
 ### Filtering Collectors
