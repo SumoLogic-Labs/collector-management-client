@@ -8,16 +8,19 @@ Collector Management Script
 This Python script allows managing a set of installed Sumo Logic Collectors by applying a bulk action:
 
 * Listing details about a set of Collectors (`-listVersions`)
+* Listing details about a set of offline Collectors (`-listOfflineCollectors`)
 * Upgrading or downgrading a set of Collectors to a desired version (`-upgrade`)
 * Adding a collection source to a set of Collectors (`-addSource`)
+* Deleting offline collectors (`-deleteOfflineCollectors`)
 
-You can also optionally `-filter` the set of Collectors by name, category, or list of IDs.
+You can also optionally `-filter` the set of Collectors by name, category, or list of IDs. Filter **cannot be applied to offline Collectors** management.
 
 ### Required Modules
-The modules [requests](https://github.com/kennethreitz/requests) (version >=2.4.2) and [terminaltables](https://github.com/Robpol86/terminaltables) must be installed in order for the script to run properly. This can be done by simply running the commands: 
+The modules [requests](https://github.com/kennethreitz/requests) (version >=2.4.2), [terminaltables](https://github.com/Robpol86/terminaltables) and [future](https://github.com/PythonCharmers/python-future) (if Python 2 is used) must be installed in order for the script to run properly. This can be done by simply running the commands: 
 ```
 pip install requests
 pip install terminaltables
+pip install future
 ```
 
 ### Authentication Parameters
@@ -46,6 +49,15 @@ Output:
 | ubuntu-3 | 100000079 | 19.155-13 | -        | UI             | True  |
 | ubuntu-4 | 100000080 | 19.155-13 | -        | UI             | True  |
 +----------+-----------+-----------+----------+----------------+-------+
+```
+
+### Listing Offline Collectors
+
+Relvant information about subset of offline Collectors will be presented in the same way as for `-listVersions`, except that `-filter` cannot be applied and the only way to filter offline Collectors is providing `aliveBeforeDays` value.
+
+Example:
+```
+$ python sumo_mgmt.py -url https://api.sumologic.com/api/v1/ -accessid [YOUR ACCESS ID] -accesskey [YOUR ACCESS KEY] -listOfflineCollectors [aliveBeforeDays]
 ```
 
 ### Upgrading Collectors
@@ -140,6 +152,8 @@ Add source from source.json to above Collectors? [Y/N]: Y
 ### Filtering Collectors
 An optional `-filter` parameter is used to narrow the set of Collectors that will be modified for any of the three available commands. Collectors can be filtered by _name_, _category_, _version_, or _ids_ fields.
 
+It cannot be applied to `-listOfflineCollectors` or `-deleteOfflineCollectors`
+
 The _name_ field specifies a Collector name to filter. The wildcard character `*` may also be used.
 ```
 -filter name=prod-collector-*
@@ -159,6 +173,15 @@ The _id_ field specifies a list of Collector IDs to filter, separated by commas.
 ```
 -filter ids=1234567,1726010,5555123
 ```
+### Deleting Offline Collectors
+
+Set of offline Collectors can be deleted by using `-deleteOfflineCollectors [aliveBeforeDays]`. Before this operation, list of offline Collectors that will be deleted, will be presented in the same way as for `-listOfflineCollectors [aliveBeforeDays]`
+
+Example:
+```
+$ python sumo_mgmt.py -url https://api.sumologic.com/api/v1/ -accessid [YOUR ACCESS ID] -accesskey [YOUR ACCESS KEY] -deleteOfflineCollectors [aliveBeforeDays]
+```
+
 
 ### More Examples
 Below are some additional example use cases.
