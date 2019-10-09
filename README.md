@@ -13,6 +13,7 @@ This Python script allows managing a set of installed Sumo Logic Collectors by a
 * Adding a collection source to a set of Collectors (`-addSource`)
 * Updating a collection source with the same name that exists on a set of Collectors (`-updateSource`)
 * Deleting offline collectors (`-deleteOfflineCollectors`)
+* Assigning collectors to a budget (`-assignBudget`)
 
 You can also optionally `-filter` the set of Collectors by name, category, or list of IDs. Filter **cannot be applied to offline Collectors** management.
 
@@ -191,6 +192,14 @@ Set of offline Collectors can be deleted by using `-deleteOfflineCollectors [ali
 Example:
 ```
 $ python sumo_mgmt.py -url https://api.sumologic.com/api/v1/ -accessid [YOUR ACCESS ID] -accesskey [YOUR ACCESS KEY] -deleteOfflineCollectors [aliveBeforeDays]
+```
+
+### Assign Ingest Budget to Collectors
+
+A filtered set of collectors can be assigned to an [Ingest Budget](https://help.sumologic.com/Manage/Ingestion-and-Volume/Ingest_Budgets) by using the -assignBudget command with the ID of the budget you'd like to assign.
+
+```
+python sumo_mgmt.py -url https://api.sumologic.com/api/v1/ -accessid [YOUR ACCESS ID] -accesskey [YOUR ACCESS KEY] -filter name=prod-collector-* -assignBudget [Budget Id]
 ```
 
 
