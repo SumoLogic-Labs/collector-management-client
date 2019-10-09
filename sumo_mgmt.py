@@ -12,7 +12,6 @@ from datetime import datetime
 from terminaltables import AsciiTable
 from builtins import input
 import getpass
-import swagger_client
 
 '''
 This module contains a management script for performing various actions on a list of Collectors.
@@ -50,7 +49,6 @@ MIN_BATCH_SIZE = 1
 DEFAULT_BATCH_SIZE = 10
 MAX_ALIVE_BEFORE_DAYS = 100
 MIN_ALIVE_BEFORE_DAYS = 1
-configuration = swagger_client.Configuration()
 
 
 def check_alive_before_days_range(arg):
@@ -705,10 +703,6 @@ def add_Ingest_Budget(id,collectorId):
 
 if __name__ == "__main__":
     if validate():
-        configuration.host = args.url[0][:-4]
-        configuration.username = args.accessid[0]
-        configuration.password = args.accesskey[0]
-        api_instance = swagger_client.IngestBudgetManagementV1Api(swagger_client.ApiClient(configuration))
         table_headings = ['name', 'id', 'version', 'category', 'sourceSyncMode', 'alive']
         source_table_headings = ['collectorid', 'name', 'id', 'category']
 
