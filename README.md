@@ -193,6 +193,14 @@ Example:
 $ python sumo_mgmt.py -url https://api.sumologic.com/api/v1/ -accessid [YOUR ACCESS ID] -accesskey [YOUR ACCESS KEY] -deleteOfflineCollectors [aliveBeforeDays]
 ```
 
+### Assign Ingest Budget to Collectors
+
+A list of collectors based on filter can be assigned Ingest Budget
+
+```
+python sumo_mgmt.py -url https://api.sumologic.com/api/v1/ -accessid [YOUR ACCESS ID] -accesskey [YOUR ACCESS KEY] -filter name=prod-collector-* -budgetId [ Budget Id]
+```
+
 
 ### More Examples
 Below are some additional example use cases.
