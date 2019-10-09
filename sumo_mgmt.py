@@ -80,7 +80,7 @@ parser.add_argument('-getSources', action='store_true', help='list the sources o
 parser.add_argument('-updateSource', metavar='', type=str, nargs=2, help='updates source with a given name to a source defined in provided JSON file')
 parser.add_argument('-listOfflineCollectors', metavar="[1-100]", type=check_alive_before_days_range, nargs=1, help='list offline collectors, with given aliveBeforeDays parameter (in range from 1 to 100)')
 parser.add_argument('-deleteOfflineCollectors', metavar="[1-100]", type=check_alive_before_days_range, nargs=1, help='delete given set of offline collectors with given aliveBeforeDays parameter (in range from 1 to 100)')
-parser.add_argument('-budgetId', metavar='', type=lambda x: int(x,16), nargs=1, help='enter Ingest budget Id')
+parser.add_argument('-budgetId', metavar='', type=str, nargs=1, help='enter Ingest budget Id')
 
 # Additional options
 parser.add_argument('-y', '-Y', action='store_true', help='flag to automatically accept any prompts')
@@ -693,6 +693,15 @@ def delete_offline_collectors():
     else:
         log('[ERROR] Successfully deleted offline Collectors')
 
+def add_Ingest_Budget(id,collectorId):
+    url = args.url[0] + 'ingestBudgets/' + id +'/collectors/' + str(collectorId)
+    print url
+    header = {'Content-Type': 'application/json'}
+    r = requests.put(url, headers=header,  auth=(args.accessid[0], args.accesskey[0]))
+    if r.status_code != 200:
+        log('[ERROR] Failed to apply Ingest Budget')
+    else:
+        log('Successfully applied Ingest Budget')
 
 if __name__ == "__main__":
     if validate():
@@ -755,5 +764,5 @@ if __name__ == "__main__":
             delete_offline_collectors()
         elif args.budgetId:
             for collector in collectors:
-                print 'assigning budgetId '+str(hex(args.budgetId[0])[2:])+' to collector '+str(collector['name'])
-                api_response = api_instance.assign_collector_to_budget(id=hex(args.budgetId[0])[2:], collector_id=int(collector['id']))
+                print 'assigning budgetId '+args.budgetId[0]+' to collector '+str(collector['name'])
+                add_Ingest_Budget(args.budgetId[0],int(collector['id']))
