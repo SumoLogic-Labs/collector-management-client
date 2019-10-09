@@ -592,6 +592,8 @@ def print_collector_table(collectors, headings):
             for col in headings:
                 if col == 'category' and 'category' not in collector:
                     row.append('-')
+                elif col == 'sourceSyncMode' and 'sourceSyncMode' not in collector:
+                    row.append('-')
                 elif col == 'version':
                     row.append(collector['collectorVersion'])
                 else:
@@ -727,7 +729,7 @@ if __name__ == "__main__":
             collectors = list(filter_by(any_source_collectors, {'sourceSyncMode': 'UI'}))   # filters further
             msg = 'Update source ' + str(args.updateSource[1]) + ' from ' + str(args.updateSource[0]) + ' to above Collectors? [Y/N]: '
         elif args.budgetId:
-            collectors = get_collectors('collectors', {'collectorType': 'Installable','alive': True})
+            collectors = get_collectors('collectors',None)
 
         # Filtering fetched collectors if needed
         if args.filter:
