@@ -757,5 +757,5 @@ if __name__ == "__main__":
             delete_offline_collectors()
         elif args.assignBudget:
             for collector in collectors:
-                print('Assigning budgetId ' + args.budgetId[0] + ' to collector ' + str(collector['name']))
+                log('Assigning budgetId ' + args.budgetId[0] + ' to collector ' + str(collector['name']))
                 add_Ingest_Budget(args.assignBudget[0],int(collector['id']))
