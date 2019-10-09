@@ -691,7 +691,7 @@ def delete_offline_collectors():
     else:
         log('[ERROR] Successfully deleted offline Collectors')
 
-def add_Ingest_Budget(id,collectorId):
+def add_ingest_budget(id,collectorId):
     url = args.url[0] + 'ingestBudgets/' + id +'/collectors/' + str(collectorId)
     header = {'Content-Type': 'application/json'}
     r = requests.put(url, headers=header,  auth=(args.accessid[0], args.accesskey[0]))
@@ -758,4 +758,5 @@ if __name__ == "__main__":
         elif args.assignBudget:
             for collector in collectors:
                 log('Assigning budgetId ' + args.budgetId[0] + ' to collector ' + str(collector['name']))
-                add_Ingest_Budget(args.assignBudget[0],int(collector['id']))
+                add_ingest_budget(args.assignBudget[0],int(collector['id']))
+                time.sleep(0.2)
