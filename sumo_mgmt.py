@@ -12,6 +12,7 @@ from datetime import datetime
 from terminaltables import AsciiTable
 from builtins import input
 import getpass
+import swagger_client
 
 '''
 This module contains a management script for performing various actions on a list of Collectors.
@@ -49,6 +50,7 @@ MIN_BATCH_SIZE = 1
 DEFAULT_BATCH_SIZE = 10
 MAX_ALIVE_BEFORE_DAYS = 100
 MIN_ALIVE_BEFORE_DAYS = 1
+configuration = swagger_client.Configuration()
 
 
 def check_alive_before_days_range(arg):
@@ -78,7 +80,7 @@ parser.add_argument('-getSources', action='store_true', help='list the sources o
 parser.add_argument('-updateSource', metavar='', type=str, nargs=2, help='updates source with a given name to a source defined in provided JSON file')
 parser.add_argument('-listOfflineCollectors', metavar="[1-100]", type=check_alive_before_days_range, nargs=1, help='list offline collectors, with given aliveBeforeDays parameter (in range from 1 to 100)')
 parser.add_argument('-deleteOfflineCollectors', metavar="[1-100]", type=check_alive_before_days_range, nargs=1, help='delete given set of offline collectors with given aliveBeforeDays parameter (in range from 1 to 100)')
-
+parser.add_argument('-budgetId', metavar='', type=lambda x: int(x,16), nargs=1, help='enter Ingest budget Id')
 
 # Additional options
 parser.add_argument('-y', '-Y', action='store_true', help='flag to automatically accept any prompts')
@@ -125,7 +127,7 @@ def validate():
         parser.print_help()
         return False
     elif not any([args.listVersions, args.upgrade, args.addSource, args.updateSource,
-                args.getSources, args.deleteOfflineCollectors, args.listOfflineCollectors]):
+                args.getSources, args.deleteOfflineCollectors, args.listOfflineCollectors,args.budgetId]):
         log('[ERROR] please provide a command to list versions, list offline, upgrade, or add source')
         parser.print_help()
         return False
@@ -692,6 +694,10 @@ def delete_offline_collectors():
 
 if __name__ == "__main__":
     if validate():
+        configuration.host = args.url[0][:-4]
+        configuration.username = args.accessid[0]
+        configuration.password = args.accesskey[0]
+        api_instance = swagger_client.IngestBudgetManagementV1Api(swagger_client.ApiClient(configuration))
         table_headings = ['name', 'id', 'version', 'category', 'sourceSyncMode', 'alive']
         source_table_headings = ['collectorid', 'name', 'id', 'category']
 
@@ -720,6 +726,8 @@ if __name__ == "__main__":
             any_source_collectors = get_collectors('collectors', {'collectorType': 'Installable', 'alive': True})
             collectors = list(filter_by(any_source_collectors, {'sourceSyncMode': 'UI'}))   # filters further
             msg = 'Update source ' + str(args.updateSource[1]) + ' from ' + str(args.updateSource[0]) + ' to above Collectors? [Y/N]: '
+        elif args.budgetId:
+            collectors = get_collectors('collectors', {'collectorType': 'Installable','alive': True})
 
         # Filtering fetched collectors if needed
         if args.filter:
@@ -743,3 +751,7 @@ if __name__ == "__main__":
             print_sources_table(collectors_with_sources, source_table_headings)
         elif args.deleteOfflineCollectors and prompt(msg):
             delete_offline_collectors()
+        elif args.budgetId:
+            for collector in collectors:
+                print 'assigning budgetId '+str(hex(args.budgetId[0])[2:])+' to collector '+str(collector['name'])
+                api_response = api_instance.assign_collector_to_budget(id=hex(args.budgetId[0])[2:], collector_id=int(collector['id']))
