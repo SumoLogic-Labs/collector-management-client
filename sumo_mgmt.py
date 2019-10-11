@@ -125,8 +125,8 @@ def validate():
         parser.print_help()
         return False
     elif not any([args.listVersions, args.upgrade, args.addSource, args.updateSource,
-                args.getSources, args.deleteOfflineCollectors, args.listOfflineCollectors, args.budgetId]):
-        log('[ERROR] please provide a command to list versions, list offline, upgrade, or add source')
+                args.getSources, args.deleteOfflineCollectors, args.listOfflineCollectors, args.assignBudget]):
+        log('[ERROR] please provide a command to list versions, list offline, upgrade, add source, or assign budget')
         parser.print_help()
         return False
     else:
