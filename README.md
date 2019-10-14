@@ -196,7 +196,7 @@ $ python sumo_mgmt.py -url https://api.sumologic.com/api/v1/ -accessid [YOUR ACC
 
 ### Assign Ingest Budget to Collectors
 
-A filtered set of collectors can be assigned to an [Ingest Budget](https://help.sumologic.com/Manage/Ingestion-and-Volume/Ingest_Budgets) by using the -assignBudget command with the ID of the budget you'd like to assign.
+A filtered set of collectors can be assigned to an [Ingest Budget](https://help.sumologic.com/Manage/Ingestion-and-Volume/Ingest_Budgets) by using the `-assig command with the ID of the budget you'd like to assign.
 
 ```
 python sumo_mgmt.py -url https://api.sumologic.com/api/v1/ -accessid [YOUR ACCESS ID] -accesskey [YOUR ACCESS KEY] -filter name=prod-collector-* -assignBudget [Budget Id]
