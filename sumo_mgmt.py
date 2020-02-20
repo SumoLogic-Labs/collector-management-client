@@ -229,7 +229,7 @@ def get_collectors(path, filters, aliveBeforeDays=0):
     offset = 0
 
     while True:
-        payload = {'offset': offset}
+        payload = {'offset': offset, 'limit': 1000}
 
         if aliveBeforeDays > 0:
             payload.update({'aliveBeforeDays': aliveBeforeDays})
