@@ -683,7 +683,7 @@ def update_source(collector_list):
 
 
 def delete_offline_collectors():
-    url = args.url[0] + '/collectors/offline'
+    url = args.url[0] + 'collectors/offline'
     r = requests.delete(url, params={'aliveBeforeDays': args.deleteOfflineCollectors[0]}, auth=(args.accessid[0], args.accesskey[0]))
 
     if r.status_code != 200 and r.status_code != 201:
