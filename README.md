@@ -20,8 +20,8 @@ You can also optionally `-filter` the set of Collectors by name, category, or li
 ### Required Modules
 The modules [requests](https://github.com/kennethreitz/requests) (version >=2.4.2) and [terminaltables](https://github.com/Robpol86/terminaltables) must be installed in order for the script to run properly. This can be done by simply running the commands: 
 ```
-pip install requests
-pip install terminaltables
+python3 -m pip install requests
+python3 -m pip install terminaltables
 ```
 
 ### Authentication Parameters
